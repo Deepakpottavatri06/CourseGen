@@ -9,7 +9,7 @@ class Summarizer:
     def __init__(self):
         self.client = OpenAI(
         api_key=GEMINI_API_KEY,
-        base_url="https://generativelanguage.googleapis.com/v1b eta/openai/"
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
         )
     
     def get_summary_prompt(self, query: str, contents: List[str], length: str = "medium") -> str:
