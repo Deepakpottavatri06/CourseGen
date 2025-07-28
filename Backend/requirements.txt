@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+trafilatura
+openai
+python-dotenv
+pydantic
+ddgs
+profanity-check
