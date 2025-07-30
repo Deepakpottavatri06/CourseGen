@@ -16,7 +16,7 @@ class Summarizer:
         """Generate prompt for summarization"""
         length_instructions = {
             "short": "Provide a concise summary in 1 paragraph.",
-            "medium": "Provide a comprehensive summary in 1-2 paragraphs.",
+            "medium": "Provide a comprehensive summary in 2-3 paragraphs.",
             "long": "Provide a detailed summary with key points and examples in 3-4 paragraphs."
         }
         
@@ -47,7 +47,7 @@ class Summarizer:
             return "No content available for summarization."
         
         prompt = self.get_summary_prompt(query, contents, length)
-        
+        max_length = 2000 if length == "long" else (1200 if length == "medium" else 600)
         try:
             response =  self.client.chat.completions.create(
                 model="gemini-2.0-flash-lite",
@@ -55,7 +55,7 @@ class Summarizer:
                     {"role": "system", "content": "You are a helpful assistant that creates accurate summaries from web content."},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=1500 if length == "long" else 800,
+                max_tokens=max_length,
                 temperature=0.3
             )
 

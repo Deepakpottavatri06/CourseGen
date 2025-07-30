@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException , BackgroundTasks , Request
+from fastapi import Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional, List
@@ -6,34 +7,65 @@ from WebSearch.websearch import WebSearcher
 from WebSearch.content_extractor import ContentExtractor
 from WebSearch.summarizer import Summarizer
 from datetime import datetime
-
+from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
+import os
+from dotenv import load_dotenv
+from middleware.auth import authorise
+from profanity_detection import is_profane
+from api.login_register import app as login_register_app
+from LearningAssistant.models import LearningRequest, LearningResponse, ErrorResponse
+from LearningAssistant.content_generator import ContentGenerator
+from LearningAssistant.learning_service import LearningService
+from model.db_connect import db
+from bson import ObjectId
 from openai import OpenAI
 from ddgs import DDGS
+# Global variables for services
+learning_service = None
 
-from profanity_detection import is_profane
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    global learning_service
+    
+    gemini_api_key = os.getenv("GEMINI_API_KEY")
+    if not gemini_api_key:
+        raise ValueError("GEMINI_API_KEY environment variable is required")
+    
+    # Initialize services
+    content_generator = ContentGenerator()
+    web_searcher = WebSearcher()  # Your existing class
+    content_extractor = ContentExtractor()  # Your existing class
+    
+    learning_service = LearningService(
+        content_generator=content_generator,
+        web_searcher=web_searcher,
+        content_extractor=content_extractor
+    )
+    
+    yield
+    
+    # Shutdown
+    learning_service = None
 
 
-app = FastAPI(title="Web Search Summarizer", version="1.0.0")
+app = FastAPI(title="Web Search Summarizer", version="1.0.0", lifespan=lifespan)
+
+origins = [
+   "*",  # Allow all origins for development; restrict in production
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Models
-class SearchRequest(BaseModel):
-    query: str
-    max_results: int = 5
-    summary_length: str = "medium"  # short, medium, long
 
-class SearchResult(BaseModel):
-    title: str
-    url: str
-    snippet: str
-    content: Optional[str] = None
-    content_length: Optional[int] = None
-
-class SummaryResponse(BaseModel):
-    query: str
-    summary: str
-    sources: List[SearchResult]
-    processing_time: float
-    total_content_chars: int
 
 
 # Initialize services
@@ -41,71 +73,89 @@ searcher = WebSearcher()
 extractor = ContentExtractor()
 summarizer = Summarizer()
 
-@app.post("/search-summarize", response_model=SummaryResponse)
-async def search_and_summarize(request: SearchRequest):
-    """Main endpoint: search web and generate summary"""
-    start_time = datetime.now()
-    
-    try:
-        # Step 0: Check if query is profane
-        if is_profane(request.query):
-            return JSONResponse(status_code=400 , content={"detail": "Inappropriate query detected. Please rephrase your query."})
 
-        # Step 1: Search the web
-        print(f"Searching for: {request.query}")
-        # search_results = await searcher.search_serpapi(request.query, request.max_results)
-        search_results = await searcher.search_duckduckgo(request.query, request.max_results)
-        
-        if not search_results:
-            raise HTTPException(status_code=404, detail="No search results found")
-        
-        # Step 2: Extract content from URLs
-        print("Extracting content from URLs...")
-        urls = [result["url"] for result in search_results]
-        contents = await extractor.extract_multiple_contents(urls)
-        
-        # Step 3: Prepare data for summarization
-        valid_contents = []
-        processed_results = []
-        
-        for result in search_results:
-            url = result["url"]
-            content = contents.get(url)
-            
-            search_result = SearchResult(
-                title=result["title"],
-                url=url,
-                snippet=result["snippet"],
-                content=content,
-                content_length=len(content) if content else 0
-            )
-            processed_results.append(search_result)
-            
-            if content:
-                valid_contents.append(content)
-        
-        # Step 4: Generate summary
-        print("Generating summary...")
-        summary = await summarizer.generate_summary(
-            request.query, 
-            valid_contents, 
-            request.summary_length
-        )
-        
-        # Calculate metrics
-        processing_time = (datetime.now() - start_time).total_seconds()
-        total_chars = sum(len(content) for content in valid_contents)
-        # print(summary)
-        return SummaryResponse(
-            query=request.query,
-            summary=summary,
-            sources=processed_results,
-            processing_time=processing_time,
-            total_content_chars=total_chars
-        )
-        
+app.include_router(login_register_app, prefix="/api", tags=["Authentication"])
+
+
+def serialize_mongo_document(doc):
+    for key, value in doc.items():
+        if isinstance(value, ObjectId):
+            doc[key] = str(value)
+    return doc
+
+
+@app.get("/api/course-content/{content_id}")
+async def get_course_content(content_id: str, payload: dict = Depends(authorise)):
+    """Get course content by ID"""
+    try:
+        content = await db['course_content'].find_one({"_id": ObjectId(content_id)})
+        if not content:
+            raise HTTPException(status_code=404, detail="Content not found")
+
+        return JSONResponse(content=serialize_mongo_document(content), status_code=200)
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+async def generate_learning_background(request: LearningRequest , payload:dict):
+    """Background task to generate learning content"""
+    try:
+        if not learning_service:
+            raise HTTPException(status_code=500, detail="Learning service not initialized")
+
+        response = await learning_service.create_learning_content(request)
+        content = db['course_content'].find_one_and_update({"_id": ObjectId(payload["content_id"])},{
+            "$set": {
+                "content_loaded": True,
+                **response.model_dump(),
+            }
+        })
+        return content
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+@app.post("/api/generate-learning-content")
+async def generate_learning_content(request:  LearningRequest, background_tasks: BackgroundTasks, payload: dict = Depends(authorise)):
+    """
+    Generate comprehensive learning content for a given topic and subtopics
+    """
+    try:
+        if not learning_service:
+            raise HTTPException(status_code=500, detail="Learning service not initialized")
+        
+        # Validate request
+        if not request.topic.strip():
+            raise HTTPException(status_code=400, detail="Topic cannot be empty")
+        
+        if not request.sub_topics or len(request.sub_topics) == 0:
+            raise HTTPException(status_code=400, detail="At least one subtopic is required")
+        
+        if len(request.sub_topics) > 10:
+            raise HTTPException(status_code=400, detail="Maximum 10 subtopics allowed")
+        
+        # Generate content
+        # response = await learning_service.create_learning_content(request)
+        content = await db['course_content'].insert_one({
+            "user_id": ObjectId(payload.get("user_id")),
+            "topic": request.topic,
+            "sub_topics": request.sub_topics,
+            "content_loaded":False,
+        })
+        payload["content_id"] = str(content.inserted_id)
+        background_tasks.add_task(generate_learning_background, request, payload)
+        return JSONResponse(
+            content={"message": "Learning content generation started in the background. You can check the status later." , 
+                     "content_id": payload["content_id"]},
+            status_code=202
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 
 @app.get("/health")
 async def health_check():
