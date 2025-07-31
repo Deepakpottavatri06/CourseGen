@@ -12,17 +12,42 @@ class LearningService:
     async def create_learning_content(self, request: LearningRequest) -> LearningResponse:
         """Main service method to create comprehensive learning content"""
         
+        
         try:
+            # Step 0: course design logic
+            # If subtopics are less than or equal to 6, design course structure
+            final_subtopics = request.sub_topics
+            course_designed = False
+            if len(request.sub_topics) <= 6:
+                print(f"Designing course structure for {len(request.sub_topics)} subtopics...")
+                try:
+                    designed_subtopics = await self.content_generator.design_course_structure(
+                        topic=request.topic,
+                        user_subtopics=request.sub_topics,
+                        difficulty=request.difficulty,
+                        language=request.language if request.language else "english"
+                    )
+                    final_subtopics = designed_subtopics
+                    print(f"Designed subtopics: {final_subtopics}")
+                    course_designed = True
+                    print(f"Course design completed. Using {len(final_subtopics)} designed subtopics.")
+                except Exception as e:
+                    print(f"Course design failed: {str(e)}. Using original subtopics.")
+                    final_subtopics = request.sub_topics
+            else:
+                print(f"Skipping course design for {len(request.sub_topics)} subtopics (>6) to reduce costs.")
+            
             # Step 1: Search for relevant content
-            topic_queries, subtopic_queries_map = self._generate_search_queries(request.topic, request.sub_topics)
+            topic_queries, subtopic_queries_map = self._generate_search_queries(request.topic, final_subtopics)
             topic_extracted_content, subtopic_content_map = await self._search_and_extract_content(topic_queries, subtopic_queries_map)
-            
-            
-            
+
+            print(f"Topic content extracted successfully for topic '{request.topic}'")
+
+
             # Step 2: Generate learning content
             introduction, subtopic_contents = await self.content_generator.generate_complete_learning_content(
                 topic=request.topic,
-                subtopics=request.sub_topics,
+                subtopics=final_subtopics,
                 difficulty=request.difficulty,
                 topic_extracted_content=topic_extracted_content,
                 subtopic_content_map=subtopic_content_map,
@@ -33,13 +58,15 @@ class LearningService:
             total_word_count = introduction.word_count + sum(sc.word_count for sc in subtopic_contents)
             estimated_reading_time = max(1, total_word_count // 200)  # ~200 words per minute
             
+            print(f"Successfully generated learning content for topic '{request.topic}'")
             return LearningResponse(
                 topic=request.topic,
                 difficulty=request.difficulty,
                 introduction=introduction,
                 subtopic_contents=subtopic_contents,
                 total_word_count=total_word_count,
-                estimated_reading_time=estimated_reading_time
+                estimated_reading_time=estimated_reading_time,
+                course_designed=course_designed
             )
             
         except Exception as e:
@@ -59,8 +86,9 @@ class LearningService:
         subtopic_queries_map = {}
         for subtopic in subtopics:
             subtopic_queries_map[subtopic] = [
-                f"{subtopic} explanation ",
+                f"{topic} {subtopic} explanation ",
                 f"learn {subtopic} {topic}",
+                f"{topic} {subtopic} guide"
             ]
         
         return topic_queries, subtopic_queries_map

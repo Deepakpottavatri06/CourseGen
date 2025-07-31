@@ -1,3 +1,5 @@
+from pydantic import Field
+import re
 from fastapi import FastAPI, HTTPException , BackgroundTasks , Request
 from fastapi import Depends
 from fastapi.responses import JSONResponse
@@ -116,6 +118,57 @@ async def generate_learning_background(request: LearningRequest , payload:dict):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class MarkReadPayload(BaseModel):
+    sub_topic: str = Field(..., description="The name of the sub-topic to mark as read")
+
+@app.get("/api/course-content")
+async def get_all_course_content(payload: dict = Depends(authorise)):
+    """Get all course content for the authenticated user"""
+    try:
+        user_id = payload.get("user_id")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Could not validate user credentials")
+
+        contents = await db['course_content'].find({"user_id": ObjectId(user_id)}).to_list(length=None)
+        serialized_contents = [serialize_mongo_document(content) for content in contents]
+
+        return JSONResponse(content=serialized_contents, status_code=200)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/course-content/{content_id}/read")
+async def mark_course_content_as_read(req_body: MarkReadPayload, content_id: str, payload: dict = Depends(authorise)):
+    """Mark course content as read"""
+    try:
+        sub_topic = req_body.sub_topic
+
+        user_id = payload.get("user_id")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Could not validate user credentials")
+
+        result = await db['course_content'].update_one(
+            {
+                "_id": ObjectId(content_id),
+                "user_id": ObjectId(user_id)
+            },
+            {
+                "$set": {"subtopic_contents.$[elem].read": True}
+            },
+            array_filters=[{"elem.subtopic": req_body.sub_topic}] # Access sub_topic from the validated payload
+        )
+
+        if result.modified_count == 0:
+            # This could mean the parent doc wasn't found OR the sub_topic wasn't found within it.
+            # A good practice is to check if the document exists first for a more precise error.
+            raise HTTPException(
+                status_code=404,
+                detail=f"Content with ID '{content_id}' and sub-topic '{req_body.sub_topic}' not found for this user."
+            )
+
+        return {"message": f"Sub-topic '{req_body.sub_topic}' marked as read."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/generate-learning-content")
 async def generate_learning_content(request:  LearningRequest, background_tasks: BackgroundTasks, payload: dict = Depends(authorise)):
@@ -159,15 +212,19 @@ async def generate_learning_content(request:  LearningRequest, background_tasks:
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "timestamp": datetime.now()}
+    """Health check endpoint"""
+    return {"status": "healthy", "service": "AI Learning Assistant"}
 
 @app.get("/")
 async def root():
+    """Root endpoint with API information"""
     return {
-        "message": "Web Search Summarizer API",
+        "message": "AI Learning Assistant API",
+        "version": "1.0.0",
         "endpoints": {
-            "search": "POST /search-summarize",
-            "health": "GET /health"
+            "generate_content": "/generate-learning-content",
+            "health": "/health",
+            "docs": "/docs"
         }
     }
 

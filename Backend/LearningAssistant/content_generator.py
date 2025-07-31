@@ -9,6 +9,87 @@ class ContentGenerator:
     def __init__(self):
 
         self.model = genai.Client()
+    
+    async def design_course_structure(
+        self,
+        topic: str,
+        user_subtopics: List[str],
+        difficulty: DifficultyLevel,
+        language: str = "english"
+    ) -> List[str]:
+        """Design optimal course structure using Gemini"""
+        
+        difficulty_context = self._get_difficulty_context(difficulty)
+        
+        prompt = f"""
+        You are an expert course designer. Design an optimal learning course structure for the topic "{topic}" at {difficulty.value} level in {language}.
+        
+        User provided these subtopics: {', '.join(user_subtopics)}
+        
+        Difficulty Context:
+        - Level: {difficulty.value}
+        - Tone: {difficulty_context['tone']}
+        - Depth: {difficulty_context['depth']}
+        
+        Your task:
+        1. Analyze the user's subtopics
+        2. Design a logical, progressive course structure
+        3. Ensure subtopics build upon each other
+        4. Make them appropriate for {difficulty.value} level learners
+        5. Keep the number of subtopics between 3-7 for optimal learning
+        
+        Requirements:
+        - Use clear, descriptive subtopic names
+        - Ensure logical learning progression
+        - Cover essential concepts for the topic
+        - Consider the difficulty level
+        - Make subtopics comprehensive but focused
+        
+        Provide ONLY the subtopic names, one per line, in the optimal learning order.
+        Do not include numbers, bullets, or explanations - just the subtopic names.
+        
+        Example format:
+        Introduction to Machine Learning
+        Supervised Learning Fundamentals  
+        Unsupervised Learning Methods
+        Model Evaluation and Validation
+        """
+        
+        try:
+            response = await asyncio.to_thread(
+                self.model.models.generate_content,
+                 model="gemini-2.5-flash",
+                contents = prompt
+            )
+            
+            content = response.text if response.text else ""
+            
+            # Parse subtopics from response
+            designed_subtopics = []
+            for line in content.strip().split('\n'):
+                line = line.strip()
+                if line and not line.startswith('#') and len(line) > 3:
+                    # Remove any numbering or bullets that might have been added
+                    clean_line = re.sub(r'^\d+\.?\s*', '', line)
+                    clean_line = re.sub(r'^[-•*]\s*', '', clean_line)
+                    if clean_line:
+                        designed_subtopics.append(clean_line.strip())
+            
+            # Fallback to user subtopics if design fails
+            if not designed_subtopics:
+                print("Course design failed, using user provided subtopics")
+                return user_subtopics
+            
+            # Limit to reasonable number
+            if len(designed_subtopics) > 8:
+                designed_subtopics = designed_subtopics[:8]
+            
+            print(f"Course designed: {len(designed_subtopics)} subtopics")
+            return designed_subtopics
+            
+        except Exception as e:
+            print(f"Error in course design: {str(e)}, falling back to user subtopics")
+            return user_subtopics
         
     def _get_difficulty_context(self, difficulty: DifficultyLevel) -> dict[str,str]:
         """Get context based on difficulty level"""
@@ -135,6 +216,7 @@ class ContentGenerator:
             else:
                 prerequisites = []
             
+            print(f"Introduction generated successfully for topic '{topic}'")
             return TopicIntroduction(
                 topic=topic,
                 introduction=sections.get('introduction', ''),
@@ -143,7 +225,6 @@ class ContentGenerator:
                 prerequisites=prerequisites,
                 word_count=len(content.split())
             )
-            
         except Exception as e:
             raise Exception(f"Error generating topic introduction: {str(e)}")
 
@@ -155,9 +236,10 @@ class ContentGenerator:
         difficulty: DifficultyLevel,
         topic_extracted_content: Dict[str, str],
         subtopic_content_map: Dict[str, Dict[str, str]],
+        learning_objectives: List[str] | None,
         language: str = "english",
     ) -> SubTopicContent:
-        """Generate comprehensive content for a subtopic"""
+        """Generate comprehensive content for a subtopic with learning objectives context"""
         
         difficulty_context = self._get_difficulty_context(difficulty)
         
@@ -175,6 +257,15 @@ class ContentGenerator:
                 for content in subtopic_content.values() if content
             ])
         
+        # Add learning objectives context
+        objectives_context = ""
+        if learning_objectives:
+            objectives_context = f"""
+        
+        Course Learning Objectives (ensure your content aligns with these):
+        {chr(10).join([f"• {obj}" for obj in learning_objectives])}
+        """
+        
         prompt = f"""
         Create comprehensive educational content about "{subtopic}" as part of the main topic "{topic}" 
         at {difficulty.value} level in {language}.
@@ -184,6 +275,7 @@ class ContentGenerator:
         - Depth: {difficulty_context['depth']}
         - Examples: {difficulty_context['examples']}
         - Length: {difficulty_context['length']}
+        {objectives_context}
         
         Research Context (use as reference):
         {relevant_content}
@@ -195,6 +287,7 @@ class ContentGenerator:
         4. Step-by-step explanations where applicable
         5. Common misconceptions or pitfalls (if relevant)
         6. Connection to the main topic and other subtopics
+        7. How this subtopic contributes to achieving the overall learning objectives
         
         Requirements:
         - Minimum 800-1200 words (approximately 1 page)
@@ -203,8 +296,10 @@ class ContentGenerator:
         - Include practical examples
         - Use clear headings and structure
         - Make it comprehensive yet accessible
+        - Align content with the course learning objectives
         
         Focus on providing value and deep understanding of "{subtopic}" within the context of "{topic}".
+        Ensure the content helps learners progress toward the overall course objectives.
         """
         
         try:
@@ -216,7 +311,7 @@ class ContentGenerator:
 
             content = response.text if response.text else ""
             sources = list(subtopic_content.keys()) if subtopic_content else []
-            
+            print(f"Subtopic content generated successfully for subtopic '{subtopic}'")
             return SubTopicContent(
                 subtopic=subtopic,
                 content=content,
@@ -276,19 +371,26 @@ class ContentGenerator:
     ) -> tuple[TopicIntroduction, List[SubTopicContent]]:
         """Generate complete learning content for topic and all subtopics"""
         
-        # Generate topic introduction
+        # Step 1: Generate topic introduction first
         introduction = await self.generate_topic_introduction(
             topic, subtopics, difficulty, topic_extracted_content, subtopic_content_map, language
         )
         
-        # Generate subtopic contents concurrently
-        subtopic_tasks = [
-            self.generate_subtopic_content(
-                topic, subtopic, difficulty, topic_extracted_content, subtopic_content_map, language
+        # Step 2: Generate subtopic contents with learning objectives context
+        # Note: Making this sequential to use learning objectives from introduction
+        subtopic_contents = []
+        for subtopic in subtopics:
+            subtopic_content = await self.generate_subtopic_content(
+                topic, 
+                subtopic, 
+                difficulty, 
+                topic_extracted_content, 
+                subtopic_content_map, 
+                introduction.learning_objectives,  # Pass learning objectives
+                language
             )
-            for subtopic in subtopics
-        ]
+            subtopic_contents.append(subtopic_content)
         
-        subtopic_contents = await asyncio.gather(*subtopic_tasks)
-        
+        # Return both introduction and subtopic contents
+        print(f"Subtopic contents generated successfully for topic '{topic}'")
         return introduction, subtopic_contents

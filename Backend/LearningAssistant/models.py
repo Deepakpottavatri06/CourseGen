@@ -19,6 +19,7 @@ class SubTopicContent(BaseModel):
     content: str
     sources: List[str] = Field(default_factory=list)
     word_count: int
+    read : bool = Field(default=False, description="Whether the subtopic content has been read")
 
 class TopicIntroduction(BaseModel):
     topic: str
@@ -35,7 +36,7 @@ class LearningResponse(BaseModel):
     subtopic_contents: List[SubTopicContent]
     total_word_count: int
     estimated_reading_time: int  # in minutes
-
+    course_designed: bool = Field(default=False, description="Whether course structure was designed by AI")
 
 
 class ErrorResponse(BaseModel):
