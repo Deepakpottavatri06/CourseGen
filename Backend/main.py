@@ -52,7 +52,7 @@ async def lifespan(app: FastAPI):
     learning_service = None
 
 
-app = FastAPI(title="Web Search Summarizer", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="CourseGen , AI Assistant", version="1.0.0", lifespan=lifespan)
 
 origins = [
    "*",  # Allow all origins for development; restrict in production
