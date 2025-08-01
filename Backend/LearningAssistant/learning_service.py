@@ -18,7 +18,7 @@ class LearningService:
             # If subtopics are less than or equal to 6, design course structure
             final_subtopics = request.sub_topics
             course_designed = False
-            if len(request.sub_topics) <= 6:
+            if len(request.sub_topics) <= 6: # temp
                 print(f"Designing course structure for {len(request.sub_topics)} subtopics...")
                 try:
                     designed_subtopics = await self.content_generator.design_course_structure(

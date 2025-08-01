@@ -158,13 +158,13 @@ async def mark_course_content_as_read(req_body: MarkReadPayload, content_id: str
             array_filters=[{"elem.subtopic": req_body.sub_topic}] # Access sub_topic from the validated payload
         )
 
-        if result.modified_count == 0:
-            # This could mean the parent doc wasn't found OR the sub_topic wasn't found within it.
-            # A good practice is to check if the document exists first for a more precise error.
-            raise HTTPException(
-                status_code=404,
-                detail=f"Content with ID '{content_id}' and sub-topic '{req_body.sub_topic}' not found for this user."
-            )
+        # if result.modified_count == 0:
+        #     # This could mean the parent doc wasn't found OR the sub_topic wasn't found within it.
+        #     # A good practice is to check if the document exists first for a more precise error.
+        #     raise HTTPException(
+        #         status_code=404,
+        #         detail=f"Content with ID '{content_id}' and sub-topic '{req_body.sub_topic}' not found for this user."
+        #     )
 
         return {"message": f"Sub-topic '{req_body.sub_topic}' marked as read."}
     except Exception as e:

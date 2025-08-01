@@ -280,26 +280,70 @@ class ContentGenerator:
         Research Context (use as reference):
         {relevant_content}
         
+        IMPORTANT FORMATTING REQUIREMENTS:
+        - Use proper Markdown formatting throughout
+        - Include clear headings (# ## ###) to structure content
+        - Add proper line breaks between sections and paragraphs
+        - Use bullet points (-) or numbered lists (1.) where appropriate
+        - Format code examples using ```language code blocks
+        - Create tables using Markdown table syntax (| | |)
+        - Use **bold** and *italic* text for emphasis
+        - Ensure proper spacing and readability
+        - Structure content with clear sections and subsections
+        
         Create well-structured content that includes:
-        1. Clear explanation of the subtopic
-        2. Key concepts and definitions
-        3. Practical examples and applications
-        4. Step-by-step explanations where applicable
-        5. Common misconceptions or pitfalls (if relevant)
+        1. Clear explanation of the subtopic (use headings)
+        2. Key concepts and definitions (use subheadings and formatting)
+        3. Practical examples and applications (use code blocks if applicable)
+        4. Step-by-step explanations where applicable (use numbered lists)
+        5. Common misconceptions or pitfalls (use bullet points)
         6. Connection to the main topic and other subtopics
         7. How this subtopic contributes to achieving the overall learning objectives
         
+        Content Structure Example:
+        # Subtopic Title
+        
+        Brief introduction paragraph.
+        
+        ## Key Concepts
+        
+        Explanation with proper paragraphs.
+        
+        ### Important Definition
+        
+        **Term**: Definition here.
+        
+        ## Practical Examples
+        
+        Example explanation.
+        
+        ```python
+        # Code example if applicable
+        example_code = "formatted properly"
+        ```
+        
+        ## Applications
+        
+        - Application 1
+        - Application 2
+        
+        | Feature | Description |
+        |---------|-------------|
+        | Item 1  | Details     |
+        
         Requirements:
-        - Minimum 800-1200 words (approximately 1 page)
+        - Minimum 600-700 words (approximately 1 page)
         - Educational and engaging writing style
         - Appropriate for {difficulty.value} level
-        - Include practical examples
-        - Use clear headings and structure
+        - Include practical examples with proper formatting
+        - Use clear Markdown headings and structure
         - Make it comprehensive yet accessible
         - Align content with the course learning objectives
+        - MUST include proper line breaks and formatting for frontend display
         
         Focus on providing value and deep understanding of "{subtopic}" within the context of "{topic}".
         Ensure the content helps learners progress toward the overall course objectives.
+        Use proper Markdown formatting to ensure excellent readability and frontend compatibility.
         """
         
         try:
