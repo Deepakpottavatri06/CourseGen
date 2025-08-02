@@ -1,6 +1,5 @@
 from pydantic import Field
-import re
-from fastapi import FastAPI, HTTPException , BackgroundTasks , Request
+from fastapi import FastAPI, HTTPException , BackgroundTasks
 from fastapi import Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -8,21 +7,17 @@ from typing import Optional, List
 from WebSearch.websearch import WebSearcher
 from WebSearch.content_extractor import ContentExtractor
 from WebSearch.summarizer import Summarizer
-from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import os
-from dotenv import load_dotenv
 from middleware.auth import authorise
 from profanity_detection import is_profane
 from api.login_register import app as login_register_app
-from LearningAssistant.models import LearningRequest, LearningResponse, ErrorResponse
+from LearningAssistant.models import LearningRequest
 from LearningAssistant.content_generator import ContentGenerator
 from LearningAssistant.learning_service import LearningService
 from model.db_connect import db
 from bson import ObjectId
-from openai import OpenAI
-from ddgs import DDGS
 # Global variables for services
 learning_service = None
 
@@ -129,7 +124,8 @@ async def get_all_course_content(payload: dict = Depends(authorise)):
         if not user_id:
             raise HTTPException(status_code=401, detail="Could not validate user credentials")
 
-        contents = await db['course_content'].find({"user_id": ObjectId(user_id)}).to_list(length=None)
+        contents = await db['course_content'].find({"user_id": ObjectId(user_id)},
+                                                   projection={"_id": 1, "topic": 1, "sub_topics": 1, "estimated_reading_time": 1, "difficulty": 1}).to_list(length=None)
         serialized_contents = [serialize_mongo_document(content) for content in contents]
 
         return JSONResponse(content=serialized_contents, status_code=200)

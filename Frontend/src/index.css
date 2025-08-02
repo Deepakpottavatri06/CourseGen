@@ -2,7 +2,7 @@
 /* Custom base styles that work with Tailwind */
 @layer base {
   html {
-    font-family: system-ui, sans-serif;
+    font-family: "Nata Sans", sans-serif;
   }
   
   body {

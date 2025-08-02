@@ -2,15 +2,22 @@
 import { useState } from "react"
 import { Link, useNavigate, useLocation } from "react-router-dom"
 import axios from "axios"
+import { useEffect } from "react";
 
 const LoginPage = () => {
+  const navigate = useNavigate();
+  useEffect(() => {
+    const token = sessionStorage.getItem('token');
+    if (token) {
+      navigate('/dashboard');
+    }
+  }, [navigate]);
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const navigate = useNavigate();
   const location = useLocation();
 
   const handleChange = (e) => {
@@ -112,7 +119,7 @@ const LoginPage = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
+            {/* <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <input
                   id="remember-me"
@@ -130,7 +137,7 @@ const LoginPage = () => {
                   Forgot your password?
                 </a>
               </div>
-            </div>
+            </div> */}
 
             <div>
               <button

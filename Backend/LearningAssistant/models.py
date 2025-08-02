@@ -31,6 +31,7 @@ class TopicIntroduction(BaseModel):
 
 class LearningResponse(BaseModel):
     topic: str
+    sub_topics: List[str]
     difficulty: DifficultyLevel
     introduction: TopicIntroduction
     subtopic_contents: List[SubTopicContent]

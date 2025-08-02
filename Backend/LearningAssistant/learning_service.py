@@ -18,24 +18,24 @@ class LearningService:
             # If subtopics are less than or equal to 6, design course structure
             final_subtopics = request.sub_topics
             course_designed = False
-            if len(request.sub_topics) <= 6: # temp
-                print(f"Designing course structure for {len(request.sub_topics)} subtopics...")
-                try:
-                    designed_subtopics = await self.content_generator.design_course_structure(
-                        topic=request.topic,
-                        user_subtopics=request.sub_topics,
-                        difficulty=request.difficulty,
-                        language=request.language if request.language else "english"
-                    )
-                    final_subtopics = designed_subtopics
-                    print(f"Designed subtopics: {final_subtopics}")
-                    course_designed = True
-                    print(f"Course design completed. Using {len(final_subtopics)} designed subtopics.")
-                except Exception as e:
-                    print(f"Course design failed: {str(e)}. Using original subtopics.")
-                    final_subtopics = request.sub_topics
-            else:
-                print(f"Skipping course design for {len(request.sub_topics)} subtopics (>6) to reduce costs.")
+            # if len(request.sub_topics) <= 6: # 
+            print(f"Designing course structure for {len(request.sub_topics)} subtopics...")
+            try:
+                designed_subtopics = await self.content_generator.design_course_structure(
+                    topic=request.topic,
+                    user_subtopics=request.sub_topics,
+                    difficulty=request.difficulty,
+                    language=request.language if request.language else "english"
+                )
+                final_subtopics = designed_subtopics
+                print(f"Designed subtopics: {final_subtopics}")
+                course_designed = True
+                print(f"Course design completed. Using {len(final_subtopics)} designed subtopics.")
+            except Exception as e:
+                print(f"Course design failed: {str(e)}. Using original subtopics.")
+                final_subtopics = request.sub_topics
+            # else:
+            #     print(f"Skipping course design for {len(request.sub_topics)} subtopics (>6) to reduce costs.")
             
             # Step 1: Search for relevant content
             topic_queries, subtopic_queries_map = self._generate_search_queries(request.topic, final_subtopics)
@@ -61,6 +61,7 @@ class LearningService:
             print(f"Successfully generated learning content for topic '{request.topic}'")
             return LearningResponse(
                 topic=request.topic,
+                sub_topics=final_subtopics,
                 difficulty=request.difficulty,
                 introduction=introduction,
                 subtopic_contents=subtopic_contents,

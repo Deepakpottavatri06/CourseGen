@@ -135,6 +135,7 @@ const GenerateCoursePage = () => {
           </div>
 
           <div>
+            
             <label htmlFor="newSubtopicInput" className="block text-sm font-medium text-gray-700 mb-2">
               Subtopics
             </label>
@@ -156,6 +157,7 @@ const GenerateCoursePage = () => {
               />
               <button
                 type="button"
+                disabled={formData.sub_topics.length >= 8}
                 onClick={handleAddSubtopic}
                 className="px-4 py-3 bg-blue-600 text-white rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors flex items-center gap-1"
               >
@@ -185,6 +187,9 @@ const GenerateCoursePage = () => {
             {formData.sub_topics.length === 0 && (
               <p className="mt-2 text-sm text-red-500">Please add at least one subtopic.</p>
             )}
+            {formData.sub_topics.length >= 8 && (
+              <p className="mt-2 text-sm text-red-500">You can only add up to 8 subtopics.</p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -205,7 +210,7 @@ const GenerateCoursePage = () => {
               </select>
             </div>
 
-            <div>
+            {/* <div>
               <label htmlFor="language" className="block text-sm font-medium text-gray-700 mb-2">
                 Language
               </label>
@@ -221,7 +226,7 @@ const GenerateCoursePage = () => {
                 <option value="french">French</option>
                 <option value="german">German</option>
               </select>
-            </div>
+            </div> */}
           </div>
 
           <div>

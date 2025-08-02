@@ -12,7 +12,7 @@ const HomePage = () => {
               <span className="block text-blue-200">Tailored to Your Needs</span>
             </h1>
             <p className="text-xl md:text-2xl mb-8 text-blue-100 max-w-3xl mx-auto">
-              Simply provide a topic, subtopics, and difficulty level. Our AI will curate content from various sources
+              Simply provide a topic, subtopics, and difficulty level. AI will curate content from various sources
               to create your personalized learning course.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">

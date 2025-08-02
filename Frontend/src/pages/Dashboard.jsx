@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import axios from "axios"
 import { useNavigate, Link } from "react-router-dom"
@@ -99,12 +97,11 @@ const DashboardPage = () => {
                 </div>
                 <p className="text-gray-700 mb-2 flex items-center">
                   <BarChart2 className="h-4 w-4 mr-2 text-gray-500" />
-                  <span className="font-medium">Difficulty:</span>{" "}
-                  {course.difficulty}
+                  <span className="font-medium">Difficulty:  {course.difficulty}</span>
                 </p>
                 <p className="text-gray-700 mb-4 flex items-center">
                   <Clock className="h-4 w-4 mr-2 text-gray-500" />
-                  <span className="font-medium">Reading Time:</span> {course.estimated_reading_time} mins
+                  <span className="font-medium">Reading Time: {course.estimated_reading_time} mins</span> 
                 </p>
                 <div className="mt-auto flex flex-wrap gap-2">
                   {course.sub_topics &&

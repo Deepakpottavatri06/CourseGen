@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect, useRef } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import axios from "axios"
@@ -292,7 +290,7 @@ const CourseDetailPage = () => {
                       }`}
                     >
                       <span>{section.title}</span>
-                      {section.type === "subtopic" && readSections[section.id] && (
+                      {section.type === "subtopic" && (readSections[section.id] || section.read) && (
                         <CheckCircle2 className="h-4 w-4 text-green-500" />
                       )}
                     </button>
@@ -303,11 +301,11 @@ const CourseDetailPage = () => {
           </aside>
 
           {/* Course Content Display */}
-          <div ref={contentContainerRef} className="lg:col-span-1 space-y-10">
+          <div ref={contentContainerRef} className="lg:col-span-1 space-y-10 overflow-x-auto">
             {currentContent && (
               <div
                 key={currentContent.id} // Key to force re-render when content changes
-                className={`p-8 rounded-xl shadow-md border ${
+                className={`p-8 rounded-xl shadow-md border break-words max-w-full ${
                   currentContent.type === "main"
                     ? currentContent.id === "introduction"
                       ? "bg-blue-50 border-blue-100"
@@ -334,21 +332,21 @@ const CourseDetailPage = () => {
                   {currentContent.type === "subtopic" && (
                     <button
                       onClick={handleMarkAsRead}
-                      disabled={currentContent.read}
+                      disabled={currentContent.read || readSections[currentContent.id]}
                       className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center ${
-                        currentContent.read
+                        (currentContent.read || readSections[currentContent.id])
                           ? "bg-green-100 text-green-700 cursor-not-allowed"
                           : "bg-blue-600 hover:bg-blue-700 text-white"
                       }`}
                       
                     >
-                      {(currentContent.read) ? (
-                        console.log("Section already marked as read"),
+                      {(currentContent.read || readSections[currentContent.id]) ? (
+                        // console.log("Section already marked as read"),
                         <>
                           <CheckCircle2 className="h-4 w-4 mr-2" /> Read
                         </>
                       ) : (
-                        console.log("Section not marked as read",currentContent),
+                        // console.log("Section not marked as read",currentContent),
                         <>
                           <Bookmark className="h-4 w-4 mr-2" /> Mark as Read
                         </>
@@ -381,7 +379,7 @@ const CourseDetailPage = () => {
                 {currentContent.type === "subtopic" && (
                   <>
                     <div
-                      className="prose max-w-none text-gray-800 leading-relaxed whitespace-pre-line"
+                      className="prose max-w-full break-words text-gray-800 leading-relaxed whitespace-pre-line overflow-x-auto"
                     >
                       <ReactMarkdown>{currentContent.content}</ReactMarkdown>
                     </div>
