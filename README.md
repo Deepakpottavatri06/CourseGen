@@ -111,3 +111,14 @@ npm install
 # Start development server
 npm run dev
 ```
+
+#### Environment Variables
+
+>**backend/.env:**
+```dotenv
+# Environment variables for FastAPI backend
+MONGODB_URI=mongodb://localhost:27017
+GEMINI_API_KEY=your_key_here
+SECRET_KEY=your_secret_key_here # Used for JWT signing
+
+```
