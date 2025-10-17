@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coursegen-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: coursegen
+  template:
+    metadata:
+      labels:
+        app: coursegen
+    spec:
+      containers:
+        - name: coursegen
+          image: deepakpottavatri/course-gen-backend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4000
+          env:
+            - name: MONGO_URL
+              valueFrom:
+                secretKeyRef:
+                  name: coursegen-secret
+                  key: MONGO_URL
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: coursegen-secret
+                  key: SECRET_KEY
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: coursegen-secret
+                  key: GEMINI_API_KEY
