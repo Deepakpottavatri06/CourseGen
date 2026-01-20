@@ -10,7 +10,7 @@ const Navigation = () => {
     // Check if user is logged in by looking for token in sessionStorage
     const token = sessionStorage.getItem('token')
     setIsLoggedIn(!!token)
-  }, [])
+  }, [location.pathname])
 
   const isActive = (path) => {
     return location.pathname === path
