@@ -66,9 +66,9 @@ app.add_middleware(
 
 
 # Initialize services
-searcher = WebSearcher()
-extractor = ContentExtractor()
-summarizer = Summarizer()
+# searcher = WebSearcher()
+# extractor = ContentExtractor()
+# summarizer = Summarizer()
 
 
 app.include_router(login_register_app, prefix="/api", tags=["Authentication"])

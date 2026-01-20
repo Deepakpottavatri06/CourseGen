@@ -1,10 +1,12 @@
 from typing import List, Dict, Tuple
 import asyncio
 from .content_generator import ContentGenerator
+from WebSearch.content_extractor import ContentExtractor
+from WebSearch.websearch import WebSearcher
 from .models import LearningRequest, LearningResponse, TopicIntroduction, SubTopicContent
 
 class LearningService:
-    def __init__(self, content_generator: ContentGenerator, web_searcher, content_extractor):
+    def __init__(self, content_generator: ContentGenerator, web_searcher:WebSearcher, content_extractor:ContentExtractor):
         self.content_generator = content_generator
         self.web_searcher = web_searcher
         self.content_extractor = content_extractor
